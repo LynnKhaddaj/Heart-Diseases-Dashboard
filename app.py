@@ -11,7 +11,7 @@ import streamlit as st
 def login():
     st.markdown("<h2 style='text-align:center;'>🔒 Heart Dashboard Login</h2>", unsafe_allow_html=True)
     password = st.text_input("Enter password:", type="password")
-    if password == "yoursecretpassword":    # CHANGE THIS!
+    if password == "lynn123":    # CHANGE THIS!
         st.session_state["pw"] = True
         st.experimental_rerun()
     elif password:
