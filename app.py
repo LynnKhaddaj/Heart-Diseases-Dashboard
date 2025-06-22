@@ -1,8 +1,25 @@
+
 import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+
+import streamlit as st
+
+# ---- SIMPLE PASSWORD PAGE ----
+def login():
+    st.markdown("<h2 style='text-align:center;'>🔒 Heart Dashboard Login</h2>", unsafe_allow_html=True)
+    password = st.text_input("Enter password:", type="password")
+    if password == "yoursecretpassword":    # CHANGE THIS!
+        st.session_state["pw"] = True
+        st.experimental_rerun()
+    elif password:
+        st.error("Wrong password!")
+
+if "pw" not in st.session_state or not st.session_state["pw"]:
+    login()
+    st.stop()
 
 st.set_page_config(page_title="Heart Disease Dashboard", layout="wide")
 # 0) Remove extra top padding & set smaller default fonts
