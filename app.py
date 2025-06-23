@@ -150,7 +150,7 @@ with bot[0]:
 with bot[1]:
     st.markdown("<div class='chart-title'>Abs Correlation with Heart Disease</div>", unsafe_allow_html=True)
     # include fasting blood sugar ('fbs')
-    cols = ['age','trestbps','cholesterol','max_hr','oldpeak','fbs']
+    cols = ['age','trestbps','cholesterol','max_hr','oldpeak','fasting_bs']
     # male vs female overlays if both present
     if d['Sex: Male'].nunique() > 1:
         cm = (
