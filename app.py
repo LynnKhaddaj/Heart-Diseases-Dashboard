@@ -198,6 +198,67 @@ with bot[2]:
     )
     fig6.update_yaxes(tickformat='.0%', range=[0,1])
     st.plotly_chart(fig6, use_container_width=True, key="fig6")
+# ---- 3rd row of creative, deep-dive visuals ----
+third = st.columns(3)
+
+with third[0]:
+    st.markdown("<div class='chart-title'>Sex → Age Group → Pain Type Sunburst</div>", unsafe_allow_html=True)
+    sb = d.copy()
+    sb['Sex'] = sb['Sex: Male'].map({1:'Male',0:'Female'})
+    fig7 = px.sunburst(
+        sb,
+        path=['Sex','Age Group','chest_pain_type'],
+        values=None,
+        color='heart_disease',
+        color_continuous_scale=['#87ceeb','#e63946'],
+        color_continuous_midpoint=0.3,
+        title=""
+    )
+    fig7.update_layout(height=tile_h, margin=marg, coloraxis_showscale=False)
+    st.plotly_chart(fig7, use_container_width=True, key="fig7")
+
+with third[1]:
+    st.markdown("<div class='chart-title'>Heatmap: Max HR × Oldpeak & Disease Rate</div>", unsafe_allow_html=True)
+    # Bin max_hr and oldpeak for heatmap axes
+    d['HR_bin'] = pd.cut(d['max_hr'], bins=6)
+    d['OP_bin'] = pd.cut(d['oldpeak'], bins=6)
+    hm = d.groupby(['HR_bin','OP_bin'])['heart_disease'].mean().unstack() * 100
+    fig8 = px.imshow(hm, color_continuous_scale=['#edf6f9','#ffb4a2','#b7094c'],
+                     labels={'color':'Disease %'})
+    fig8.update_layout(height=tile_h, margin=marg)
+    st.plotly_chart(fig8, use_container_width=True, key="fig8")
+
+with third[2]:
+    st.markdown("<div class='chart-title'>Overlapping Risks: Smoker, High Chol, Age 60+</div>", unsafe_allow_html=True)
+    # Build three boolean groups
+    d['High_Chol'] = d['cholesterol'] > 250
+    d['Smoker'] = d['smoking_status'].isin(['smokes'])
+    d['Senior'] = d['age'] >= 60
+    overlap = pd.DataFrame({
+        'Smoker': d['Smoker'],
+        'High_Chol': d['High_Chol'],
+        'Senior': d['Senior'],
+        'heart_disease': d['heart_disease']
+    })
+    # Count group sizes for overlap
+    from matplotlib_venn import venn3
+    import matplotlib.pyplot as plt
+    from io import BytesIO
+    sets = [
+        set(overlap[overlap['Smoker']].index),
+        set(overlap[overlap['High_Chol']].index),
+        set(overlap[overlap['Senior']].index)
+    ]
+    plt.figure(figsize=(3,3))
+    v = venn3(sets, set_labels=('Smoker','High Chol','60+'))
+    plt.title('')
+    buf = BytesIO()
+    plt.tight_layout()
+    plt.savefig(buf, format='png', bbox_inches='tight', transparent=True)
+    plt.close()
+    buf.seek(0)
+    st.image(buf, caption="Venn: Overlap of 3 Major Risk Factors", use_column_width=True)
+
 
 st.markdown("---")
 st.write("*Use the sidebar filters to refresh all six panels.*")
