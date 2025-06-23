@@ -1,63 +1,52 @@
-
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-
-import streamlit as st
 
 # ---- SIMPLE PASSWORD PAGE ----
 def login():
     password = st.text_input("Enter password:", type="password")
     if password == "lynn123":
         st.session_state['logged_in'] = True
-        st.rerun()   # <--- Use this
+        st.rerun()
     else:
         st.session_state['logged_in'] = False
 
+st.set_page_config(page_title="Heart Disease Dashboard", layout="wide")
 
-st.set_page_config(page_title="Heart Disease Dashboard", layout="wide")
-# 0) Remove extra top padding & set smaller default fonts
-# ——————————————————————————————
-st.set_page_config(page_title="Heart Disease Dashboard", layout="wide")
+# ---- GLOBAL STYLES & CSS ----
 st.markdown(
     """
     <style>
       /* remove Streamlit's default top padding */
       .block-container { padding-top: 0rem; }
       /* main title */
-      .main-title { font-size: 2rem; margin-bottom: 0.5rem; }
+      .main-title { font-size: 2.1rem; margin-bottom: 0.2rem; }
+      /* shrink divider */
+      hr { border-top:1px solid #ddd; margin:8px 0px; }
       /* chart subtitles */
-      .chart-title { font-size: 1.1rem; margin: 0.3rem 0; }
+      .chart-title { font-size: 1.08rem; margin: 0.3rem 0 0.7rem 0; font-weight:600; }
+      /* card style */
+      .kpi-card {
+        padding: 16px;
+        border-radius: 8px;
+        color: white;
+        text-align: center;
+      }
     </style>
     """,
     unsafe_allow_html=True,
 )
-# --- Custom CSS for "card" effect targeting .element-container ---
-st.markdown("""
-    <style>
-    /* This targets ALL chart blocks in 6-panel layout */
-    .element-container:has(.js-plotly-plot) {
-        background: #fff;
-        border-radius: 15px;
-        box-shadow: 0 2px 8px 0 rgba(60,60,60,0.09), 0 0.5px 1.5px 0 rgba(0,0,0,0.05);
-        border: 1px solid #edeef2;
-        padding: 16px 8px 8px 8px;
-        margin-bottom: 16px;
-    }
-    .main-title { font-size: 2.1rem; margin-bottom: 0.7rem; }
-    .chart-title { font-size: 1.08rem; margin: 0.3rem 0 0.7rem 0; font-weight:600;}
-    </style>
-""", unsafe_allow_html=True)
 
 # ---- LOAD DATA ----
 @st.cache_data
 def load_data():
     df = pd.read_csv("heart_cleaned_fe.csv")
-    bins  = [29,40,50,60,70, df.age.max()]
-    labs  = ['30-40','41-50','51-60','61-70','71+']
-    df['Age Group'] = pd.cut(df.age, bins=bins, labels=labs)
+    bins = [29, 40, 50, 60, 70, df.age.max()]
+    labels = ['30-40','41-50','51-60','61-70','71+']
+    df['Age Group'] = pd.cut(df.age, bins=bins, labels=labels)
     return df
 
 df = load_data()
@@ -71,53 +60,63 @@ ang = st.sidebar.checkbox("Exercise-Induced Angina: Yes")
 sex = st.sidebar.selectbox("Sex", ['All','Male','Female'])
 
 d = df[df.chest_pain_type.isin(cp)]
-if ecg!='All':     d = d[d.resting_ecg==ecg]
+if ecg != 'All':
+    d = d[d.resting_ecg == ecg]
 d = d[d['Age Group'].isin(ag)]
-if ang:            d = d[d['Exercise-Induced Angina: Yes']==1]
-if sex!='All':
-    val = 1 if sex=='Male' else 0
-    d = d[d['Sex: Male']==val]
+if ang:
+    d = d[d['Exercise-Induced Angina: Yes'] == 1]
+if sex != 'All':
+    val = 1 if sex == 'Male' else 0
+    d = d[d['Sex: Male'] == val]
 
-# ---- TITLE ----
-st.markdown("<div class='main-title'>💓 Heart Disease Dashboard</div>", unsafe_allow_html=True)
+# ---- TITLE + KPIs ----
+hdr, k1, k2, k3 = st.columns([3,1,1,1])
+with hdr:
+    st.markdown("<div class='main-title'>💓 Heart Disease Dashboard</div>", unsafe_allow_html=True)
+    st.markdown("<hr/>", unsafe_allow_html=True)
 
+# Compute top 3 analytical KPIs
+prev = d['heart_disease'].mean() * 100
+p_ang1 = d[d['Exercise-Induced Angina: Yes']==1]['heart_disease'].mean()
+p_ang0 = d[d['Exercise-Induced Angina: Yes']==0]['heart_disease'].mean()
+or_ang = (p_ang1/(1-p_ang1)) / (p_ang0/(1-p_ang0)) if 0 < p_ang0 < 1 else np.nan
+p_down = d[d['st_slope']=='Down']['heart_disease'].mean()
+p_up   = d[d['st_slope']=='Up']['heart_disease'].mean()
+or_slope_down = (p_down/(1-p_down)) / (p_up/(1-p_up)) if 0 < p_up < 1 else np.nan
+
+# Render KPI cards
+k1.markdown(f"""
+<div class='kpi-card' style='background-color:#4e79a7;'>
+  <h4 style='margin:0;'>Disease Prevalence</h4>
+  <p style='font-size:1.6rem; margin:4px 0;'>{prev:.1f}%</p>
+</div>
+""", unsafe_allow_html=True)
+
+k2.markdown(f"""
+<div class='kpi-card' style='background-color:#f28e2b;'>
+  <h4 style='margin:0;'>OR: Angina</h4>
+  <p style='font-size:1.6rem; margin:4px 0;'>{or_ang:.2f}×</p>
+</div>
+""", unsafe_allow_html=True)
+
+k3.markdown(f"""
+<div class='kpi-card' style='background-color:#e15759;'>
+  <h4 style='margin:0;'>OR: ST Slope Down</h4>
+  <p style='font-size:1.6rem; margin:4px 0;'>{or_slope_down:.2f}×</p>
+</div>
+""", unsafe_allow_html=True)
+
+# ---- LAYOUT: 2×3 GRID OF CHARTS ----
 tile_h = 250
 marg   = dict(l=20, r=20, t=20, b=20)
 
-# ----------------------
-#   Top 3 Analytical KPIs
-# ----------------------
-
-# Compute on your filtered df `d`
-df_kpi = d.copy()
-
-# 1) Overall heart disease prevalence
-prev = df_kpi['heart_disease'].mean() * 100
-
-# 2) Odds ratio: Exercise-Induced Angina
-p_ang1 = df_kpi[df_kpi['Exercise-Induced Angina: Yes']==1]['heart_disease'].mean()
-p_ang0 = df_kpi[df_kpi['Exercise-Induced Angina: Yes']==0]['heart_disease'].mean()
-or_ang = (p_ang1/(1-p_ang1)) / (p_ang0/(1-p_ang0)) if 0< p_ang0 <1 else np.nan
-
-# 3) Odds ratio: ST Slope Down vs Up
-p_down = df_kpi[df_kpi['st_slope']=='Down']['heart_disease'].mean()
-p_up   = df_kpi[df_kpi['st_slope']=='Up']['heart_disease'].mean()
-or_slope_down = (p_down/(1-p_down)) / (p_up/(1-p_up)) if 0< p_up <1 else np.nan
-
-# Display as three KPIs
-k1, k2, k3 = st.columns(3)
-k1.metric("Disease Prevalence", f"{prev:.1f}%", help="% of patients with heart disease")
-k2.metric("OR: Angina",        f"{or_ang:.2f}×", help="Odds ratio for angina vs no-angina")
-k3.metric("OR: ST Slope Down", f"{or_slope_down:.2f}×", help="Odds ratio Down vs Up slope")
-
-# ---- LAYOUT: 2x3 grid ----
 top = st.columns(3)
 bot = st.columns(3)
 
 with top[0]:
     st.markdown("<div class='chart-title'>Chest Pain % by Age Group</div>", unsafe_allow_html=True)
     mos = d.groupby(['Age Group','chest_pain_type']).size().reset_index(name='count')
-    mos['pct'] = mos['count']/mos.groupby('Age Group')['count'].transform('sum')
+    mos['pct'] = mos['count'] / mos.groupby('Age Group')['count'].transform('sum')
     fig1 = px.bar(mos, x='Age Group', y='pct', color='chest_pain_type',
                   barmode='stack', color_discrete_sequence=px.colors.qualitative.Safe,
                   labels={'pct':'% Patients'})
@@ -126,8 +125,10 @@ with top[0]:
 
 with top[1]:
     st.markdown("<div class='chart-title'>ECG Count & Disease %</div>", unsafe_allow_html=True)
-    ct = d.resting_ecg.value_counts().reset_index(name='count'); ct.columns=['ecg','count']
-    rt = d.groupby('resting_ecg')['heart_disease'].mean().reset_index(name='rate'); rt['rate']*=100
+    ct = d.resting_ecg.value_counts().reset_index(name='count')
+    ct.columns=['ecg','count']
+    rt = d.groupby('resting_ecg')['heart_disease'].mean().reset_index(name='rate')
+    rt['rate'] *= 100
     df_e = ct.merge(rt, left_on='ecg', right_on='resting_ecg')
     fig2 = make_subplots(specs=[[{'secondary_y':True}]])
     fig2.add_trace(go.Bar(x=df_e['ecg'], y=df_e['count'], marker_color='teal'), secondary_y=False)
@@ -180,7 +181,7 @@ with bot[0]:
 with bot[1]:
     st.markdown("<div class='chart-title'>Abs Correlation with Heart Disease</div>", unsafe_allow_html=True)
     cols = ['age','resting_bp','cholesterol','max_hr','oldpeak']
-    if d['Sex: Male'].nunique()>1:
+    if d['Sex: Male'].nunique() > 1:
         cm = (d[d['Sex: Male']==1][cols+['heart_disease']].corr()['heart_disease'].abs()
                 .drop('heart_disease').reset_index(name='corr'))
         cf = (d[d['Sex: Male']==0][cols+['heart_disease']].corr()['heart_disease'].abs()
@@ -226,4 +227,4 @@ with bot[2]:
     st.plotly_chart(fig6, use_container_width=True, key="fig6")
 
 st.markdown("---")
-st.write("*Use the sidebar filters to refresh all six panels.*")
+st.write("*Use the sidebar filters to refresh all panels.*")
