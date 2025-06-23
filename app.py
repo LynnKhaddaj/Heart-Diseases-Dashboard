@@ -5,53 +5,42 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# ---- SIMPLE PASSWORD PAGE ----
-def login():
-    password = st.text_input("Enter password:", type="password")
-    if password == "lynn123":
-        st.session_state['logged_in'] = True
-        st.rerun()
-    else:
-        st.session_state['logged_in'] = False
-
+# ---- PAGE SETUP ----
 st.set_page_config(page_title="Heart Disease Dashboard", layout="wide")
 
-# ---- GLOBAL STYLES & CSS ----
-st.markdown(
-    """
+# ---- HIDE SIDEBAR COLLAPSE BAR & SHRINK DIVIDER ----
+st.markdown("""
     <style>
-      /* remove Streamlit's default top padding */
-      .block-container { padding-top: 0rem; }
-      /* main title */
-      .main-title { font-size: 2.1rem; margin-bottom: 0.2rem; }
-      /* shrink divider */
-      hr { border-top:1px solid #ddd; margin:8px 0px; }
-      /* chart subtitles */
-      .chart-title { font-size: 1.08rem; margin: 0.3rem 0 0.7rem 0; font-weight:600; }
-      /* card style */
-      .kpi-card {
-        padding: 16px;
-        border-radius: 8px;
-        color: white;
-        text-align: center;
+      /* hide the little >> control when sidebar is collapsed */
+      [data-testid="collapsed-control"] {
+        display: none !important;
       }
+      /* shrink any <hr> under the header */
+      hr { border-top:1px solid #ddd; margin:8px 0px; }
+      /* KPI card styling (smaller) */
+      .kpi-card {
+        padding: 8px;
+        border-radius: 6px;
+        text-align: center;
+        color: white;
+      }
+      .kpi-card h4 { margin: 2px; font-size: 1rem; }
+      .kpi-card p { margin: 2px; font-size: 1.2rem; }
     </style>
-    """,
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
 
 # ---- LOAD DATA ----
 @st.cache_data
 def load_data():
     df = pd.read_csv("heart_cleaned_fe.csv")
-    bins = [29, 40, 50, 60, 70, df.age.max()]
+    bins = [29,40,50,60,70, df.age.max()]
     labels = ['30-40','41-50','51-60','61-70','71+']
     df['Age Group'] = pd.cut(df.age, bins=bins, labels=labels)
     return df
 
 df = load_data()
 
-# ---- SIDEBAR ----
+# ---- SIDEBAR FILTERS ----
 st.sidebar.header("Filters")
 cp  = st.sidebar.multiselect("Chest Pain Type", df.chest_pain_type.unique(), df.chest_pain_type.unique())
 ecg = st.sidebar.selectbox("Resting ECG", ['All'] + df.resting_ecg.unique().tolist())
@@ -60,53 +49,51 @@ ang = st.sidebar.checkbox("Exercise-Induced Angina: Yes")
 sex = st.sidebar.selectbox("Sex", ['All','Male','Female'])
 
 d = df[df.chest_pain_type.isin(cp)]
-if ecg != 'All':
-    d = d[d.resting_ecg == ecg]
+if ecg!='All':     d = d[d.resting_ecg==ecg]
 d = d[d['Age Group'].isin(ag)]
-if ang:
-    d = d[d['Exercise-Induced Angina: Yes'] == 1]
-if sex != 'All':
-    val = 1 if sex == 'Male' else 0
-    d = d[d['Sex: Male'] == val]
+if ang:            d = d[d['Exercise-Induced Angina: Yes']==1]
+if sex!='All':
+    val = 1 if sex=='Male' else 0
+    d = d[d['Sex: Male']==val]
 
-# ---- TITLE + KPIs ----
-hdr, k1, k2, k3 = st.columns([3,1,1,1])
-with hdr:
-    st.markdown("<div class='main-title'>💓 Heart Disease Dashboard</div>", unsafe_allow_html=True)
+# ---- HEADER + 3 SMALL KPIs ----
+col0, col1, col2, col3 = st.columns([2,1,1,1])
+with col0:
+    st.markdown("<h2 style='margin-bottom:0.2rem;'>💓 Heart Disease Dashboard</h2>", unsafe_allow_html=True)
     st.markdown("<hr/>", unsafe_allow_html=True)
 
-# Compute top 3 analytical KPIs
+# Compute KPIs
 prev = d['heart_disease'].mean() * 100
 p_ang1 = d[d['Exercise-Induced Angina: Yes']==1]['heart_disease'].mean()
 p_ang0 = d[d['Exercise-Induced Angina: Yes']==0]['heart_disease'].mean()
-or_ang = (p_ang1/(1-p_ang1)) / (p_ang0/(1-p_ang0)) if 0 < p_ang0 < 1 else np.nan
+or_ang = (p_ang1/(1-p_ang1)) / (p_ang0/(1-p_ang0)) if 0< p_ang0 <1 else np.nan
 p_down = d[d['st_slope']=='Down']['heart_disease'].mean()
 p_up   = d[d['st_slope']=='Up']['heart_disease'].mean()
-or_slope_down = (p_down/(1-p_down)) / (p_up/(1-p_up)) if 0 < p_up < 1 else np.nan
+or_slope_down = (p_down/(1-p_down)) / (p_up/(1-p_up)) if 0< p_up <1 else np.nan
 
-# Render KPI cards
-k1.markdown(f"""
-<div class='kpi-card' style='background-color:#4e79a7;'>
-  <h4 style='margin:0;'>Disease Prevalence</h4>
-  <p style='font-size:1.6rem; margin:4px 0;'>{prev:.1f}%</p>
+# Render small cards
+col1.markdown(f"""
+<div class="kpi-card" style="background-color:#4e79a7;">
+  <h4>Disease Prevalence</h4>
+  <p>{prev:.1f}%</p>
 </div>
 """, unsafe_allow_html=True)
 
-k2.markdown(f"""
-<div class='kpi-card' style='background-color:#f28e2b;'>
-  <h4 style='margin:0;'>OR: Angina</h4>
-  <p style='font-size:1.6rem; margin:4px 0;'>{or_ang:.2f}×</p>
+col2.markdown(f"""
+<div class="kpi-card" style="background-color:#f28e2b;">
+  <h4>OR: Angina</h4>
+  <p>{or_ang:.2f}×</p>
 </div>
 """, unsafe_allow_html=True)
 
-k3.markdown(f"""
-<div class='kpi-card' style='background-color:#e15759;'>
-  <h4 style='margin:0;'>OR: ST Slope Down</h4>
-  <p style='font-size:1.6rem; margin:4px 0;'>{or_slope_down:.2f}×</p>
+col3.markdown(f"""
+<div class="kpi-card" style="background-color:#e15759;">
+  <h4>OR: ST Slope Down</h4>
+  <p>{or_slope_down:.2f}×</p>
 </div>
 """, unsafe_allow_html=True)
 
-# ---- LAYOUT: 2×3 GRID OF CHARTS ----
+# ---- 2×3 GRID OF CHARTS ----
 tile_h = 250
 marg   = dict(l=20, r=20, t=20, b=20)
 
@@ -116,19 +103,17 @@ bot = st.columns(3)
 with top[0]:
     st.markdown("<div class='chart-title'>Chest Pain % by Age Group</div>", unsafe_allow_html=True)
     mos = d.groupby(['Age Group','chest_pain_type']).size().reset_index(name='count')
-    mos['pct'] = mos['count'] / mos.groupby('Age Group')['count'].transform('sum')
+    mos['pct'] = mos['count']/mos.groupby('Age Group')['count'].transform('sum')
     fig1 = px.bar(mos, x='Age Group', y='pct', color='chest_pain_type',
                   barmode='stack', color_discrete_sequence=px.colors.qualitative.Safe,
                   labels={'pct':'% Patients'})
     fig1.update_layout(height=tile_h, margin=marg, yaxis_tickformat='.0%', showlegend=False)
-    st.plotly_chart(fig1, use_container_width=True, key="fig1")
+    st.plotly_chart(fig1, use_container_width=True)
 
 with top[1]:
     st.markdown("<div class='chart-title'>ECG Count & Disease %</div>", unsafe_allow_html=True)
-    ct = d.resting_ecg.value_counts().reset_index(name='count')
-    ct.columns=['ecg','count']
-    rt = d.groupby('resting_ecg')['heart_disease'].mean().reset_index(name='rate')
-    rt['rate'] *= 100
+    ct = d.resting_ecg.value_counts().reset_index(name='count'); ct.columns=['ecg','count']
+    rt = d.groupby('resting_ecg')['heart_disease'].mean().reset_index(name='rate'); rt['rate']*=100
     df_e = ct.merge(rt, left_on='ecg', right_on='resting_ecg')
     fig2 = make_subplots(specs=[[{'secondary_y':True}]])
     fig2.add_trace(go.Bar(x=df_e['ecg'], y=df_e['count'], marker_color='teal'), secondary_y=False)
@@ -136,7 +121,7 @@ with top[1]:
     fig2.update_layout(height=tile_h, margin=marg, showlegend=False)
     fig2.update_yaxes(title_text='Count', secondary_y=False)
     fig2.update_yaxes(title_text='Disease %', secondary_y=True, tickformat='.0f')
-    st.plotly_chart(fig2, use_container_width=True, key="fig2")
+    st.plotly_chart(fig2, use_container_width=True)
 
 with top[2]:
     st.markdown("<div class='chart-title'>Heatmap: Age Group vs ST Slope</div>", unsafe_allow_html=True)
@@ -146,7 +131,7 @@ with top[2]:
                      color_continuous_scale=['royalblue','firebrick'],
                      labels={'color':'Disease %'})
     fig3.update_layout(height=tile_h, margin=marg)
-    st.plotly_chart(fig3, use_container_width=True, key="fig3")
+    st.plotly_chart(fig3, use_container_width=True)
 
 with bot[0]:
     st.markdown("<div class='chart-title'>Disease % by Chest Pain Type</div>", unsafe_allow_html=True)
@@ -176,7 +161,7 @@ with bot[0]:
         xaxis_title='Chest Pain Type',
         legend_title='Sex'
     )
-    st.plotly_chart(fig4, use_container_width=True, key="fig4")
+    st.plotly_chart(fig4, use_container_width=True)
 
 with bot[1]:
     st.markdown("<div class='chart-title'>Abs Correlation with Heart Disease</div>", unsafe_allow_html=True)
@@ -201,7 +186,7 @@ with bot[1]:
                             color='corr', color_continuous_scale=['royalblue','firebrick'],
                             labels={'corr':'|Corr|','index':'Feature'})
         fig5.update_layout(height=tile_h, margin=marg, showlegend=False)
-    st.plotly_chart(fig5, use_container_width=True, key="fig5")
+    st.plotly_chart(fig5, use_container_width=True)
 
 with bot[2]:
     st.markdown("<div class='chart-title'>Trend: Age Group & Chest Pain</div>", unsafe_allow_html=True)
@@ -224,7 +209,7 @@ with bot[2]:
         showlegend=False
     )
     fig6.update_yaxes(tickformat='.0%', range=[0,1])
-    st.plotly_chart(fig6, use_container_width=True, key="fig6")
+    st.plotly_chart(fig6, use_container_width=True)
 
 st.markdown("---")
 st.write("*Use the sidebar filters to refresh all panels.*")
