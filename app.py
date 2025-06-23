@@ -202,63 +202,67 @@ with bot[2]:
 third = st.columns(3)
 
 with third[0]:
-    st.markdown("<div class='chart-title'>Sex → Age Group → Pain Type Sunburst</div>", unsafe_allow_html=True)
-    sb = d.copy()
-    sb['Sex'] = sb['Sex: Male'].map({1:'Male',0:'Female'})
-    fig7 = px.sunburst(
-        sb,
-        path=['Sex','Age Group','chest_pain_type'],
-        values=None,
+    # Animated heart disease rate by age group (or creative bar)
+    st.markdown("<div class='chart-title'>Heart Disease Rate by Age — Pulse Bar</div>", unsafe_allow_html=True)
+    age_bar = d.groupby('Age Group')['heart_disease'].mean().reset_index()
+    age_bar['heart_disease'] = (age_bar['heart_disease'] * 100).round(2)
+    fig7 = px.bar(
+        age_bar,
+        x='Age Group', y='heart_disease',
+        text='heart_disease',
         color='heart_disease',
-        color_continuous_scale=['#87ceeb','#e63946'],
-        color_continuous_midpoint=0.3,
-        title=""
+        color_continuous_scale=['#56cc9d','#ff6f69'],
+        labels={'heart_disease':'Disease %'},
     )
-    fig7.update_layout(height=tile_h, margin=marg, coloraxis_showscale=False)
+    fig7.update_traces(texttemplate="%{text:.1f}%", textposition='outside')
+    fig7.update_layout(
+        height=tile_h,
+        margin=marg,
+        yaxis=dict(range=[0,age_bar['heart_disease'].max()+5], ticksuffix='%'),
+        showlegend=False,
+        plot_bgcolor='rgba(0,0,0,0)'
+    )
     st.plotly_chart(fig7, use_container_width=True, key="fig7")
 
 with third[1]:
+    # Fix for Interval objects
     st.markdown("<div class='chart-title'>Heatmap: Max HR × Oldpeak & Disease Rate</div>", unsafe_allow_html=True)
-    # Bin max_hr and oldpeak for heatmap axes
     d['HR_bin'] = pd.cut(d['max_hr'], bins=6)
     d['OP_bin'] = pd.cut(d['oldpeak'], bins=6)
-    hm = d.groupby(['HR_bin','OP_bin'])['heart_disease'].mean().unstack() * 100
-    fig8 = px.imshow(hm, color_continuous_scale=['#edf6f9','#ffb4a2','#b7094c'],
+    # Convert bins to strings
+    d['HR_bin_str'] = d['HR_bin'].astype(str)
+    d['OP_bin_str'] = d['OP_bin'].astype(str)
+    hm = d.groupby(['HR_bin_str','OP_bin_str'])['heart_disease'].mean().unstack(fill_value=0) * 100
+    fig8 = px.imshow(hm,
+                     color_continuous_scale=['#edf6f9','#ffb4a2','#b7094c'],
                      labels={'color':'Disease %'})
     fig8.update_layout(height=tile_h, margin=marg)
     st.plotly_chart(fig8, use_container_width=True, key="fig8")
 
 with third[2]:
-    st.markdown("<div class='chart-title'>Overlapping Risks: Smoker, High Chol, Age 60+</div>", unsafe_allow_html=True)
-    # Build three boolean groups
+    st.markdown("<div class='chart-title'>UpSet Plot: Overlapping Risks</div>", unsafe_allow_html=True)
+    # UpSet logic (3 risks)
     d['High_Chol'] = d['cholesterol'] > 250
     d['Smoker'] = d['smoking_status'].isin(['smokes'])
     d['Senior'] = d['age'] >= 60
-    overlap = pd.DataFrame({
-        'Smoker': d['Smoker'],
-        'High_Chol': d['High_Chol'],
-        'Senior': d['Senior'],
-        'heart_disease': d['heart_disease']
-    })
-    # Count group sizes for overlap
-    from matplotlib_venn import venn3
-    import matplotlib.pyplot as plt
-    from io import BytesIO
-    sets = [
-        set(overlap[overlap['Smoker']].index),
-        set(overlap[overlap['High_Chol']].index),
-        set(overlap[overlap['Senior']].index)
-    ]
-    plt.figure(figsize=(3,3))
-    v = venn3(sets, set_labels=('Smoker','High Chol','60+'))
-    plt.title('')
-    buf = BytesIO()
-    plt.tight_layout()
-    plt.savefig(buf, format='png', bbox_inches='tight', transparent=True)
-    plt.close()
-    buf.seek(0)
-    st.image(buf, caption="Venn: Overlap of 3 Major Risk Factors", use_column_width=True)
-
+    upset = d.groupby(['Smoker','High_Chol','Senior'])['heart_disease'].mean().reset_index()
+    upset['Count'] = d.groupby(['Smoker','High_Chol','Senior'])['heart_disease'].count().values
+    upset['Label'] = upset.apply(
+        lambda x: f"{'S' if x['Smoker'] else '-'}{'C' if x['High_Chol'] else '-'}{'A' if x['Senior'] else '-'}",
+        axis=1
+    )
+    upset = upset.sort_values('Label')
+    fig9 = px.bar(
+        upset,
+        x='Label',
+        y='heart_disease',
+        color='Count',
+        labels={'Label':'Profile (S=Smoker, C=High Chol, A=Age 60+)', 'heart_disease':'Disease %'},
+        color_continuous_scale='rdbu'
+    )
+    fig9.update_traces(marker_line_width=1)
+    fig9.update_layout(height=tile_h, margin=marg, yaxis_ticksuffix="%", showlegend=False)
+    st.plotly_chart(fig9, use_container_width=True, key="fig9")
 
 st.markdown("---")
 st.write("*Use the sidebar filters to refresh all six panels.*")
