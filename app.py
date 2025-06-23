@@ -199,69 +199,67 @@ with bot[2]:
     fig6.update_yaxes(tickformat='.0%', range=[0,1])
     st.plotly_chart(fig6, use_container_width=True, key="fig6")
 # ---- 3rd row of creative, deep-dive visuals ----
+# ---- 3rd row: Fresh deep-dive visuals (new factors!) ----
 third = st.columns(3)
 
 with third[0]:
-    # Animated heart disease rate by age group (or creative bar)
-    st.markdown("<div class='chart-title'>Heart Disease Rate by Age — Pulse Bar</div>", unsafe_allow_html=True)
-    age_bar = d.groupby('Age Group')['heart_disease'].mean().reset_index()
-    age_bar['heart_disease'] = (age_bar['heart_disease'] * 100).round(2)
+    st.markdown("<div class='chart-title'>Disease % by Exercise-Induced Angina</div>", unsafe_allow_html=True)
+    ang = d.groupby('Exercise-Induced Angina: Yes')['heart_disease'] \
+           .mean().reset_index(name='rate')
+    ang['rate'] *= 100
     fig7 = px.bar(
-        age_bar,
-        x='Age Group', y='heart_disease',
-        text='heart_disease',
-        color='heart_disease',
-        color_continuous_scale=['#56cc9d','#ff6f69'],
-        labels={'heart_disease':'Disease %'},
+        ang,
+        x='Exercise-Induced Angina: Yes',
+        y='rate',
+        text=ang['rate'].round(1),
+        labels={
+            'Exercise-Induced Angina: Yes':'Angina (1=Yes, 0=No)',
+            'rate':'Heart Disease %'
+        },
+        color='rate',
+        color_continuous_scale=['#96d38c','#f87970']
     )
-    fig7.update_traces(texttemplate="%{text:.1f}%", textposition='outside')
+    fig7.update_traces(textposition='outside')
     fig7.update_layout(
         height=tile_h,
         margin=marg,
-        yaxis=dict(range=[0,age_bar['heart_disease'].max()+5], ticksuffix='%'),
-        showlegend=False,
-        plot_bgcolor='rgba(0,0,0,0)'
+        yaxis=dict(range=[0, ang['rate'].max() + 5], ticksuffix='%'),
+        showlegend=False
     )
     st.plotly_chart(fig7, use_container_width=True, key="fig7")
 
 with third[1]:
-    # Fix for Interval objects
-    st.markdown("<div class='chart-title'>Heatmap: Max HR × Oldpeak & Disease Rate</div>", unsafe_allow_html=True)
-    d['HR_bin'] = pd.cut(d['max_hr'], bins=6)
-    d['OP_bin'] = pd.cut(d['oldpeak'], bins=6)
-    # Convert bins to strings
-    d['HR_bin_str'] = d['HR_bin'].astype(str)
-    d['OP_bin_str'] = d['OP_bin'].astype(str)
-    hm = d.groupby(['HR_bin_str','OP_bin_str'])['heart_disease'].mean().unstack(fill_value=0) * 100
-    fig8 = px.imshow(hm,
-                     color_continuous_scale=['#edf6f9','#ffb4a2','#b7094c'],
-                     labels={'color':'Disease %'})
-    fig8.update_layout(height=tile_h, margin=marg)
+    st.markdown("<div class='chart-title'>Cholesterol Distribution by Disease</div>", unsafe_allow_html=True)
+    # map 0/1 to labels
+    d['DiseaseLabel'] = d['heart_disease'].map({0:'No Disease', 1:'Disease'})
+    fig8 = px.violin(
+        d,
+        x='DiseaseLabel',
+        y='cholesterol',
+        color='DiseaseLabel',
+        box=True,
+        points='all',
+        labels={'cholesterol':'Cholesterol (mg/dl)', 'DiseaseLabel':''}
+    )
+    fig8.update_layout(
+        height=tile_h,
+        margin=marg,
+        showlegend=False
+    )
     st.plotly_chart(fig8, use_container_width=True, key="fig8")
 
 with third[2]:
-    st.markdown("<div class='chart-title'>UpSet Plot: Overlapping Risks</div>", unsafe_allow_html=True)
-    # UpSet logic (3 risks)
-    d['High_Chol'] = d['cholesterol'] > 250
-    d['Smoker'] = d['smoking_status'].isin(['smokes'])
-    d['Senior'] = d['age'] >= 60
-    upset = d.groupby(['Smoker','High_Chol','Senior'])['heart_disease'].mean().reset_index()
-    upset['Count'] = d.groupby(['Smoker','High_Chol','Senior'])['heart_disease'].count().values
-    upset['Label'] = upset.apply(
-        lambda x: f"{'S' if x['Smoker'] else '-'}{'C' if x['High_Chol'] else '-'}{'A' if x['Senior'] else '-'}",
-        axis=1
+    st.markdown("<div class='chart-title'>Max HR vs ST Depression by Disease</div>", unsafe_allow_html=True)
+    fig9 = px.scatter(
+        d,
+        x='max_hr',
+        y='oldpeak',
+        color=d['heart_disease'].map({0:'No Disease',1:'Disease'}),
+        labels={'max_hr':'Max Heart Rate','oldpeak':'ST Depression','color':''},
+        opacity=0.7,
+        height=tile_h
     )
-    upset = upset.sort_values('Label')
-    fig9 = px.bar(
-        upset,
-        x='Label',
-        y='heart_disease',
-        color='Count',
-        labels={'Label':'Profile (S=Smoker, C=High Chol, A=Age 60+)', 'heart_disease':'Disease %'},
-        color_continuous_scale='rdbu'
-    )
-    fig9.update_traces(marker_line_width=1)
-    fig9.update_layout(height=tile_h, margin=marg, yaxis_ticksuffix="%", showlegend=False)
+    fig9.update_layout(margin=marg)
     st.plotly_chart(fig9, use_container_width=True, key="fig9")
 
 st.markdown("---")
