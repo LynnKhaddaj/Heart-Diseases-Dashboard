@@ -198,69 +198,6 @@ with bot[2]:
     )
     fig6.update_yaxes(tickformat='.0%', range=[0,1])
     st.plotly_chart(fig6, use_container_width=True, key="fig6")
-# ---- 3rd row of creative, deep-dive visuals ----
-# ---- 3rd row: Fresh deep-dive visuals (new factors!) ----
-third = st.columns(3)
-
-with third[0]:
-    st.markdown("<div class='chart-title'>Disease % by Exercise-Induced Angina</div>", unsafe_allow_html=True)
-    ang = d.groupby('Exercise-Induced Angina: Yes')['heart_disease'] \
-           .mean().reset_index(name='rate')
-    ang['rate'] *= 100
-    fig7 = px.bar(
-        ang,
-        x='Exercise-Induced Angina: Yes',
-        y='rate',
-        text=ang['rate'].round(1),
-        labels={
-            'Exercise-Induced Angina: Yes':'Angina (1=Yes, 0=No)',
-            'rate':'Heart Disease %'
-        },
-        color='rate',
-        color_continuous_scale=['#96d38c','#f87970']
-    )
-    fig7.update_traces(textposition='outside')
-    fig7.update_layout(
-        height=tile_h,
-        margin=marg,
-        yaxis=dict(range=[0, ang['rate'].max() + 5], ticksuffix='%'),
-        showlegend=False
-    )
-    st.plotly_chart(fig7, use_container_width=True, key="fig7")
-
-with third[1]:
-    st.markdown("<div class='chart-title'>Cholesterol Distribution by Disease</div>", unsafe_allow_html=True)
-    # map 0/1 to labels
-    d['DiseaseLabel'] = d['heart_disease'].map({0:'No Disease', 1:'Disease'})
-    fig8 = px.violin(
-        d,
-        x='DiseaseLabel',
-        y='cholesterol',
-        color='DiseaseLabel',
-        box=True,
-        points='all',
-        labels={'cholesterol':'Cholesterol (mg/dl)', 'DiseaseLabel':''}
-    )
-    fig8.update_layout(
-        height=tile_h,
-        margin=marg,
-        showlegend=False
-    )
-    st.plotly_chart(fig8, use_container_width=True, key="fig8")
-
-with third[2]:
-    st.markdown("<div class='chart-title'>Max HR vs ST Depression by Disease</div>", unsafe_allow_html=True)
-    fig9 = px.scatter(
-        d,
-        x='max_hr',
-        y='oldpeak',
-        color=d['heart_disease'].map({0:'No Disease',1:'Disease'}),
-        labels={'max_hr':'Max Heart Rate','oldpeak':'ST Depression','color':''},
-        opacity=0.7,
-        height=tile_h
-    )
-    fig9.update_layout(margin=marg)
-    st.plotly_chart(fig9, use_container_width=True, key="fig9")
 
 st.markdown("---")
 st.write("*Use the sidebar filters to refresh all six panels.*")
