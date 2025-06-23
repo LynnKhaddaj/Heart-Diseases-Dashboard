@@ -84,6 +84,31 @@ st.markdown("<div class='main-title'>💓 Heart Disease Dashboard</div>", unsafe
 tile_h = 250
 marg   = dict(l=20, r=20, t=20, b=20)
 
+# ----------------------
+#   Top 3 Analytical KPIs
+# ----------------------
+
+# Compute on your filtered df `d`
+df_kpi = d.copy()
+
+# 1) Overall heart disease prevalence
+prev = df_kpi['heart_disease'].mean() * 100
+
+# 2) Odds ratio: Exercise-Induced Angina
+p_ang1 = df_kpi[df_kpi['Exercise-Induced Angina: Yes']==1]['heart_disease'].mean()
+p_ang0 = df_kpi[df_kpi['Exercise-Induced Angina: Yes']==0]['heart_disease'].mean()
+or_ang = (p_ang1/(1-p_ang1)) / (p_ang0/(1-p_ang0)) if 0< p_ang0 <1 else np.nan
+
+# 3) Odds ratio: ST Slope Down vs Up
+p_down = df_kpi[df_kpi['st_slope']=='Down']['heart_disease'].mean()
+p_up   = df_kpi[df_kpi['st_slope']=='Up']['heart_disease'].mean()
+or_slope_down = (p_down/(1-p_down)) / (p_up/(1-p_up)) if 0< p_up <1 else np.nan
+
+# Display as three KPIs
+k1, k2, k3 = st.columns(3)
+k1.metric("Disease Prevalence", f"{prev:.1f}%", help="% of patients with heart disease")
+k2.metric("OR: Angina",        f"{or_ang:.2f}×", help="Odds ratio for angina vs no-angina")
+k3.metric("OR: ST Slope Down", f"{or_slope_down:.2f}×", help="Odds ratio Down vs Up slope")
 
 # ---- LAYOUT: 2x3 grid ----
 top = st.columns(3)
