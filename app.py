@@ -141,32 +141,52 @@ with bot[0]:
     )
     st.plotly_chart(fig4, use_container_width=True, key="fig4")
 
-# Row2 Col2: Absolute Correlation with Heart Disease (includes fasting_bs)
+# Row2 Col2: Absolute Correlation with Heart Disease
 with bot[1]:
     st.markdown("<div class='chart-title'>Abs Correlation with Heart Disease</div>", unsafe_allow_html=True)
+    # include "fasting_bs", "max_hr", "resting_bp"
     cols = ['age','resting_bp','cholesterol','max_hr','oldpeak','fasting_bs']
+
+    # correlation split by sex?
     if d['Sex: Male'].nunique()>1:
         cm = (d[d['Sex: Male']==1][cols+['heart_disease']].corr()['heart_disease'].abs()
                 .drop('heart_disease').reset_index(name='corr'))
         cf = (d[d['Sex: Male']==0][cols+['heart_disease']].corr()['heart_disease'].abs()
                 .drop('heart_disease').reset_index(name='corr'))
-        th = cm['index']
+
+        # rename columns for display
+        rename_map = {
+            'age':'Age','resting_bp':'Resting BP','cholesterol':'Cholesterol',
+            'max_hr':'MaxHR','oldpeak':'ST Depression','fasting_bs':'Fasting BS'
+        }
+        cm['index'] = cm['index'].replace(rename_map)
+        cf['index'] = cf['index'].replace(rename_map)
+
         fig5 = go.Figure()
-        fig5.add_trace(go.Scatterpolar(theta=th, r=cm['corr'], name='Male',
+        fig5.add_trace(go.Scatterpolar(theta=cm['index'], r=cm['corr'], name='Male',
                                        fill='toself', line_color='royalblue'))
-        fig5.add_trace(go.Scatterpolar(theta=th, r=cf['corr'], name='Female',
+        fig5.add_trace(go.Scatterpolar(theta=cf['index'], r=cf['corr'], name='Female',
                                        fill='toself', line_color='firebrick'))
-        fig5.update_layout(polar=dict(radialaxis=dict(visible=True, tickformat='.2f')),
-                           height=tile_h, margin=marg)
+        fig5.update_layout(
+            polar=dict(radialaxis=dict(visible=True, tickformat='.2f')),
+            height=tile_h, margin=marg
+        )
     else:
         c0 = (d[cols+['heart_disease']].corr()['heart_disease'].abs()
                .drop('heart_disease').reset_index(name='corr'))
+        rename_map = {
+            'age':'Age','resting_bp':'Resting BP','cholesterol':'Cholesterol',
+            'max_hr':'MaxHR','oldpeak':'ST Depression','fasting_bs':'Fasting BS'
+        }
+        c0['index'] = c0['index'].replace(rename_map)
+
         fig5 = px.bar_polar(
             c0, r='corr', theta='index',
             color='corr', color_continuous_scale=['royalblue','firebrick'],
             labels={'corr':'|Corr|','index':'Feature'}
         )
         fig5.update_layout(height=tile_h, margin=marg, showlegend=False)
+
     st.plotly_chart(fig5, use_container_width=True, key="fig5")
 
 # Row2 Col3: Trend: Age Group & Chest Pain
@@ -183,4 +203,3 @@ with bot[2]:
 
 st.markdown("---")
 st.write("*Use the sidebar filters to refresh all six panels.*")
-
