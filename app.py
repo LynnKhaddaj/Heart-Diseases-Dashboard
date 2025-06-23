@@ -84,58 +84,51 @@ st.markdown("<div class='main-title'>💓 Heart Disease Dashboard</div>", unsafe
 tile_h = 250
 marg   = dict(l=20, r=20, t=20, b=20)
 
-import numpy as np
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import roc_auc_score
+# — right after your title and before the 2×3 chart grid —
 
-# — after your title …
-st.markdown("<div class='main-title'>💓 Heart Disease Dashboard</div>", unsafe_allow_html=True)
-
-# compute on your filtered dataframe d
+# Compute on filtered df `d`
 df_kpi = d.copy()
 
-# 1) Top absolute correlation
+# 1) Top absolute correlation among numerics
 num_feats = ['age','resting_bp','cholesterol','max_hr','oldpeak']
 corrs = df_kpi[num_feats + ['heart_disease']].corr()['heart_disease'].drop('heart_disease')
 top_feat = corrs.abs().idxmax()
 top_val  = corrs[top_feat]
 
-# 2) Odds ratio: angina
+# 2) Odds ratio: Exercise‐Induced Angina
 p1 = df_kpi[df_kpi['Exercise-Induced Angina: Yes']==1]['heart_disease'].mean()
 p0 = df_kpi[df_kpi['Exercise-Induced Angina: Yes']==0]['heart_disease'].mean()
-or_ang = (p1/(1-p1)) / (p0/(1-p0)) if p0 not in (0,1) else np.nan
+or_ang = (p1/(1-p1)) / (p0/(1-p0)) if 0< p0 <1 else np.nan
 
-# 3) Odds ratio: high cholesterol >240
+# 3) Odds ratio: Cholesterol > 240
 highc = df_kpi['cholesterol'] > 240
 p1 = df_kpi[highc]['heart_disease'].mean()
 p0 = df_kpi[~highc]['heart_disease'].mean()
-or_chol = (p1/(1-p1)) / (p0/(1-p0)) if p0 not in (0,1) else np.nan
+or_chol = (p1/(1-p1)) / (p0/(1-p0)) if 0< p0 <1 else np.nan
 
-# 4) Δ oldpeak
+# 4) Δ ST-Depression (oldpeak)
 mean_old_yes = df_kpi[df_kpi['heart_disease']==1]['oldpeak'].mean()
 mean_old_no  = df_kpi[df_kpi['heart_disease']==0]['oldpeak'].mean()
 delta_old    = mean_old_yes - mean_old_no
 
-# 5) AUC numeric model
-# drop NA, simple logistic on numeric
-tmp = df_kpi[num_feats + ['heart_disease']].dropna()
-X, y = tmp[num_feats], tmp['heart_disease']
-auc = roc_auc_score(y, LogisticRegression(max_iter=200).fit(X, y).predict_proba(X)[:,1])
+# 5) Odds ratio: ST Slope = Up vs not Up
+p_up   = df_kpi[df_kpi['st_slope']=='Up']['heart_disease'].mean()
+p_not  = df_kpi[df_kpi['st_slope']!='Up']['heart_disease'].mean()
+or_slope = (p_up/(1-p_up)) / (p_not/(1-p_not)) if 0< p_not <1 else np.nan
 
-# 6) ECG lift: disease rate abnormal vs normal
-# assume resting_ecg values: "Normal","LVH","ST"
+# 6) ECG Risk Lift: abnormal vs Normal
 normal_rate = df_kpi[df_kpi['resting_ecg']=='Normal']['heart_disease'].mean()
 abn_rate    = df_kpi[df_kpi['resting_ecg']!='Normal']['heart_disease'].mean()
-lift_ecg    = abn_rate / normal_rate if normal_rate not in (0,1) else np.nan
+lift_ecg    = (abn_rate / normal_rate) if 0< normal_rate <1 else np.nan
 
-# --- display side-by-side ---
+# Display as six KPIs side by side
 k1,k2,k3,k4,k5,k6 = st.columns(6)
 k1.metric("Top Correlate", f"{top_feat} ({top_val:.2f})")
-k2.metric("OR: Angina", f"{or_ang:.2f}×")
-k3.metric("OR: Chol >240", f"{or_chol:.2f}×")
+k2.metric("OR: Angina",      f"{or_ang:.2f}×")
+k3.metric("OR: Chol >240",   f"{or_chol:.2f}×")
 k4.metric("Δ ST-Depression", f"{delta_old:.2f}")
-k5.metric("AUC (Numerics)", f"{auc:.2f}")
-k6.metric("ECG Risk Lift", f"{lift_ecg:.2f}×")
+k5.metric("OR: ST Slope Up", f"{or_slope:.2f}×")
+k6.metric("ECG Risk Lift",   f"{lift_ecg:.2f}×")
 
 # ---- LAYOUT: 2x3 grid ----
 top = st.columns(3)
