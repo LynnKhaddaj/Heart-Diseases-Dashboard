@@ -5,25 +5,29 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
-# 1) Initialize the session state flag on first run
-if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = False
 
+# 1) Initialize session state flag
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+
+# 2) Define login function
 def login():
-    # show the text_input only when not logged in
-    pwd = st.text_input("🔒 Enter password to continue:", type="password")
+    pwd = st.text_input("🔒 Enter password:", type="password")
     if pwd:
         if pwd == "lynn123":
-            st.session_state['logged_in'] = True
-            st.experimental_rerun()   # re-run so the rest of the app loads
+            st.session_state.logged_in = True
+            # force a rerun using whichever API exists
+            try:
+                st.experimental_rerun()
+            except AttributeError:
+                st.rerun()
         else:
             st.error("❌ Incorrect password")
 
-# 2) If not logged in, show the login prompt and stop here
-if not st.session_state['logged_in']:
+# 3) Block the rest of the app until logged in
+if not st.session_state.logged_in:
     login()
-    st.stop()  # nothing below this will run until logged_in == True
-
+    st.stop()
 # ——————————————————————————————
 # 0) PAGE CONFIG & CSS
 # ——————————————————————————————
