@@ -4,6 +4,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+# ---- SIMPLE PASSWORD PAGE ----
+def login():
+    password = st.text_input("Enter password:", type="password")
+    if password == "lynn123":
+        st.session_state['logged_in'] = True
+        st.rerun()   # <--- Use this
+    else:
+        st.session_state['logged_in'] = False
+
 # ——————————————————————————————
 # 0) PAGE CONFIG & CSS
 # ——————————————————————————————
