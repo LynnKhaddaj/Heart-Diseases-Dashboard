@@ -4,14 +4,25 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# ---- SIMPLE PASSWORD PAGE ----
+
+# 1) Initialize the session state flag on first run
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+
 def login():
-    password = st.text_input("Enter password:", type="password")
-    if password == "lynn123":
-        st.session_state['logged_in'] = True
-        st.rerun()   # <--- Use this
-    else:
-        st.session_state['logged_in'] = False
+    # show the text_input only when not logged in
+    pwd = st.text_input("🔒 Enter password to continue:", type="password")
+    if pwd:
+        if pwd == "lynn123":
+            st.session_state['logged_in'] = True
+            st.experimental_rerun()   # re-run so the rest of the app loads
+        else:
+            st.error("❌ Incorrect password")
+
+# 2) If not logged in, show the login prompt and stop here
+if not st.session_state['logged_in']:
+    login()
+    st.stop()  # nothing below this will run until logged_in == True
 
 # ——————————————————————————————
 # 0) PAGE CONFIG & CSS
